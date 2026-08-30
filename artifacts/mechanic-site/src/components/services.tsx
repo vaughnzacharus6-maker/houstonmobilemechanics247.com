@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useLocation } from "wouter";
+import { Link } from "wouter";
 import { Wrench, Zap, Thermometer, Settings, Fuel, Truck, Package, RotateCcw, ChevronRight } from "lucide-react";
 import { passengerServices, heavyServices } from "@/data/services";
 
@@ -25,7 +25,6 @@ function useIntersection(ref: React.RefObject<Element | null>, threshold = 0.15)
 }
 
 export default function Services() {
-  const [, navigate] = useLocation();
   const sectionRef = useRef<HTMLDivElement>(null);
   const heavyRef = useRef<HTMLDivElement>(null);
   const sectionVisible = useIntersection(sectionRef);
@@ -33,11 +32,9 @@ export default function Services() {
 
   return (
     <section id="services" className="py-24 md:py-32 bg-background relative overflow-hidden">
-      {/* Vertical accent line */}
       <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-transparent via-primary to-transparent opacity-40" />
 
       <div className="container mx-auto px-4 md:px-6">
-        {/* Passenger vehicles */}
         <div ref={sectionRef} className={`transition-all duration-700 ${sectionVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
           <div className="mb-12">
             <span className="text-primary text-sm font-bold uppercase tracking-widest">On-Site Service</span>
@@ -47,9 +44,9 @@ export default function Services() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px bg-border">
             {passengerServices.map((s, i) => (
-              <button
+              <Link
                 key={s.slug}
-                onClick={() => navigate(`/services/${s.slug}`)}
+                href={`/services/${s.slug}`}
                 className="bg-card p-6 group hover:bg-primary/10 transition-all duration-300 text-left"
                 style={{ transitionDelay: `${i * 40}ms` }}
               >
@@ -61,12 +58,11 @@ export default function Services() {
                 <span className="text-primary text-xs font-bold uppercase tracking-wider flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   Learn More <ChevronRight className="w-3 h-3" />
                 </span>
-              </button>
+              </Link>
             ))}
           </div>
         </div>
 
-        {/* Heavy duty */}
         <div
           ref={heavyRef}
           className={`mt-24 transition-all duration-700 delay-100 ${heavyVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}
@@ -85,9 +81,9 @@ export default function Services() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-border">
             {heavyServices.map((s, i) => (
-              <button
+              <Link
                 key={s.slug}
-                onClick={() => navigate(`/services/${s.slug}`)}
+                href={`/services/${s.slug}`}
                 className="bg-card/60 border-l-2 border-l-primary/0 p-6 group hover:border-l-primary hover:bg-card transition-all duration-300 text-left"
                 style={{ transitionDelay: `${i * 60}ms` }}
               >
@@ -97,7 +93,7 @@ export default function Services() {
                 <span className="text-primary text-xs font-bold uppercase tracking-wider flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   Learn More <ChevronRight className="w-3 h-3" />
                 </span>
-              </button>
+              </Link>
             ))}
           </div>
         </div>
