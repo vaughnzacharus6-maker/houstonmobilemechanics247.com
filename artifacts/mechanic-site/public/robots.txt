@@ -1,2 +1,10 @@
 User-agent: *
 Allow: /
+Disallow: /api/
+Disallow: /portal
+Disallow: /receipt/
+Disallow: /sign-in
+Disallow: /sign-up
+Disallow: /track/
+
+Sitemap: https://houstonmobilemechanics247.com/sitemap.xml
