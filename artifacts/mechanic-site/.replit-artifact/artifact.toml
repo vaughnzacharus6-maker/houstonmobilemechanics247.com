@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Houston Mobile Mechanic"
+version = "1.0.0"
+id = "artifacts/mechanic-site"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18978
+
+[services.development]
+run = "pnpm --filter @workspace/mechanic-site run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/mechanic-site", "run", "build" ]
+publicDir = "artifacts/mechanic-site/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18978"
+BASE_PATH = "/"

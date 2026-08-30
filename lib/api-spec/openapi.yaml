@@ -1,0 +1,2331 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: Houston Mobile Mechanic API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: contact
+    description: Contact / service requests
+  - name: applications
+    description: Public technician applications and private review
+  - name: team
+    description: Technician portal and dispatch operations
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /stripe/products:
+    get:
+      operationId: listStripeProducts
+      tags: [shop]
+      summary: List active products with prices
+      responses:
+        "200":
+          description: Products list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ShopProduct"
+                required: [data]
+
+  /stripe/checkout:
+    post:
+      operationId: createCheckout
+      tags: [shop]
+      summary: Create a Stripe Checkout session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckoutInput"
+      responses:
+        "200":
+          description: Checkout session URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutResult"
+
+  /ebay/status:
+    get:
+      operationId: getEbayStatus
+      tags: [shop]
+      summary: Check if eBay integration is configured
+      responses:
+        "200":
+          description: eBay configuration status
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [configured]
+                properties:
+                  configured:
+                    type: boolean
+
+  /ebay/parts:
+    get:
+      operationId: listEbayParts
+      tags: [shop]
+      summary: Search eBay Motors for car parts
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: eBay parts list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/EbayPart"
+                  total:
+                    type: integer
+
+  /stripe/deposit:
+    post:
+      operationId: createDeposit
+      tags: [shop]
+      summary: Create a $50 service booking deposit checkout session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DepositInput"
+      responses:
+        "200":
+          description: Checkout session URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutResult"
+
+  /contact:
+    post:
+      operationId: submitContact
+      tags: [contact]
+      summary: Submit a service request or contact message
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContactInput"
+      responses:
+        "201":
+          description: Submitted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContactSubmission"
+    get:
+      operationId: listContacts
+      tags: [contact]
+      summary: List all contact submissions
+      responses:
+        "200":
+          description: List of submissions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ContactSubmission"
+
+  /technician-applications:
+    post:
+      operationId: submitTechnicianApplication
+      tags: [applications]
+      summary: Submit a public technician application
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TechnicianApplicationInput"
+      responses:
+        "201":
+          description: Application submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TechnicianApplicationSubmission"
+    get:
+      operationId: listTechnicianApplications
+      tags: [applications]
+      summary: List technician applications for owner review
+      security: [{ clerk: [] }]
+      responses:
+        "200":
+          description: Technician applications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TechnicianApplication"
+        "401":
+          description: Authentication required
+        "403":
+          description: Owner or admin access required
+
+  /technician-applications/{id}:
+    get:
+      operationId: getTechnicianApplication
+      tags: [applications]
+      summary: Read one technician application for owner review
+      security: [{ clerk: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Technician application
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TechnicianApplication"
+        "401":
+          description: Authentication required
+        "403":
+          description: Owner or admin access required
+        "404":
+          description: Application not found
+    patch:
+      operationId: updateTechnicianApplication
+      tags: [applications]
+      summary: Update a technician application review
+      security: [{ clerk: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TechnicianApplicationUpdate"
+      responses:
+        "200":
+          description: Updated technician application
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TechnicianApplication"
+        "400":
+          description: Invalid review update
+        "401":
+          description: Authentication required
+        "403":
+          description: Owner or admin access required
+        "404":
+          description: Application not found
+
+  /technicians/me:
+    get:
+      operationId: getTechnicianProfile
+      tags: [team]
+      summary: Get the signed-in technician profile
+      security: [{ clerk: [] }]
+      responses:
+        "200":
+          description: Signed-in technician profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Technician"
+        "401":
+          description: Authentication required
+    patch:
+      operationId: updateTechnicianAvailability
+      tags: [team]
+      summary: Update the signed-in technician availability
+      security: [{ clerk: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AvailabilityUpdate"
+      responses:
+        "200":
+          description: Updated technician profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Technician"
+
+  /technicians/me/profile:
+    patch:
+      operationId: updateTechnicianProfile
+      tags: [team]
+      summary: Update the signed-in technician work profile
+      security: [{ clerk: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TechnicianProfileUpdate"
+      responses:
+        "200":
+          description: Updated technician profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Technician"
+        "400":
+          description: Invalid technician profile
+        "401":
+          description: Authentication required
+        "404":
+          description: Technician profile not found
+
+  /technicians/dashboard:
+    get:
+      operationId: getTechnicianDashboard
+      tags: [team]
+      summary: Get portal summary for the signed-in technician
+      security: [{ clerk: [] }]
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TechnicianDashboard"
+
+  /technician-notifications:
+    get:
+      operationId: getTechnicianNotifications
+      tags: [team]
+      summary: List the signed-in technician's dispatch notifications
+      security: [{ clerk: [] }]
+      responses:
+        "200":
+          description: Dispatch notifications and unread count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TechnicianNotificationFeed"
+
+  /technician-notifications/{id}/read:
+    patch:
+      operationId: markTechnicianNotificationRead
+      tags: [team]
+      summary: Mark a dispatch notification as read
+      security: [{ clerk: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated dispatch notification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TechnicianNotification"
+
+  /technicians:
+    get:
+      operationId: listTechnicians
+      tags: [team]
+      summary: List technicians for dispatch
+      security: [{ clerk: [] }]
+      responses:
+        "200":
+          description: Technician list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Technician"
+    post:
+      operationId: createTechnician
+      tags: [team]
+      summary: Add a technician to the team
+      security: [{ clerk: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTechnicianInput"
+      responses:
+        "201":
+          description: Technician created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Technician"
+
+  /technicians/{id}:
+    patch:
+      operationId: updateTechnician
+      tags: [team]
+      summary: Update a technician
+      security: [{ clerk: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTechnicianInput"
+      responses:
+        "200":
+          description: Updated technician
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Technician"
+
+  /calls:
+    post:
+      operationId: createServiceCall
+      tags: [team]
+      summary: Create a service call from a reviewed dispatch intake
+      security: [{ clerk: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateServiceCallInput"
+      responses:
+        "201":
+          description: Created service call
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceCall"
+    get:
+      operationId: listServiceCalls
+      tags: [team]
+      summary: List customer service calls visible to the signed-in user
+      security: [{ clerk: [] }]
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Service calls
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ServiceCall"
+
+  /calls/available:
+    get:
+      operationId: listAvailableServiceCalls
+      tags: [team]
+      summary: List open service calls available for the signed-in technician to claim
+      security: [{ clerk: [] }]
+      responses:
+        "200":
+          description: Open service calls with customer-private details removed
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AvailableServiceCall"
+        "401":
+          description: Authentication required
+        "403":
+          description: Active technician access required
+
+  /calls/{id}/preview:
+    get:
+      operationId: getAvailableServiceCallPreview
+      tags: [team]
+      summary: View an open service call before deciding whether to claim it
+      security: [{ clerk: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Open service call details with the customer phone number withheld
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceCall"
+        "401":
+          description: Authentication required
+        "403":
+          description: Active technician access required
+        "404":
+          description: Service call not found or no longer available
+
+  /calls/{id}:
+    patch:
+      operationId: updateServiceCall
+      tags: [team]
+      summary: Update editable dispatch details for a service call
+      security: [{ clerk: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateServiceCallInput"
+      responses:
+        "200":
+          description: Updated service call
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceCall"
+        "400":
+          description: Invalid service call update
+        "401":
+          description: Authentication required
+        "403":
+          description: Owner or admin access required
+        "404":
+          description: Customer call not found
+    delete:
+      operationId: deleteServiceCall
+      tags: [team]
+      summary: Delete a safe-to-remove service call
+      security: [{ clerk: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Service call deleted
+        "401":
+          description: Authentication required
+        "403":
+          description: Owner or admin access required
+        "404":
+          description: Customer call not found
+        "409":
+          description: Active or completed calls cannot be deleted
+
+  /calls/intake/extract:
+    post:
+      operationId: extractCallIntake
+      tags: [team]
+      summary: Extract a reviewable service-call intake from a pasted call summary
+      security: [{ clerk: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CallIntakeInput"
+      responses:
+        "200":
+          description: Extracted service-call fields for dispatcher review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CallIntakeExtraction"
+
+  /calls/{id}/notifications:
+    get:
+      operationId: listCallNotificationDeliveries
+      tags: [team]
+      summary: List delivery results for a dispatch broadcast
+      security: [{ clerk: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Notification delivery results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CallNotificationDeliveries"
+
+  /calls/{id}/notifications/{notificationId}/retry:
+    post:
+      operationId: retryCallNotification
+      tags: [team]
+      summary: Retry a failed technician SMS notification
+      security: [{ clerk: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: notificationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RetryCallNotificationInput"
+      responses:
+        "202":
+          description: SMS retry queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationRetry"
+
+  /phone/intakes/status:
+    get:
+      operationId: getPhoneIntakeStatus
+      tags: [team]
+      summary: Get the signed business phone intake configuration
+      security: [{ clerk: [] }]
+      responses:
+        "200":
+          description: Phone intake configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PhoneIntakeStatus"
+
+  /phone/intakes:
+    get:
+      operationId: listPhoneIntakes
+      tags: [team]
+      summary: List inbound phone intakes for dispatcher review
+      security: [{ clerk: [] }]
+      responses:
+        "200":
+          description: Inbound phone intakes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PhoneIntake"
+
+  /phone/intakes/{id}/process:
+    post:
+      operationId: processPhoneIntakeRecording
+      tags: [team]
+      summary: Transcribe a consented recording and prepare its AI intake draft
+      security: [{ clerk: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Transcribed phone intake
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PhoneIntake"
+
+  /phone/intakes/{id}/approve:
+    post:
+      operationId: approvePhoneIntake
+      tags: [team]
+      summary: Approve a corrected phone intake into a new service call
+      security: [{ clerk: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PhoneIntakeApproval"
+      responses:
+        "200":
+          description: Approved phone intake
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PhoneIntake"
+
+  /calls/{id}/assign:
+    patch:
+      operationId: assignServiceCall
+      tags: [team]
+      summary: Assign a customer call to a technician
+      security: [{ clerk: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignCallInput"
+      responses:
+        "200":
+          description: Assigned call
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceCall"
+
+  /calls/{id}/claim:
+    patch:
+      operationId: claimServiceCall
+      tags: [team]
+      summary: Claim an open service call for the signed-in technician
+      security: [{ clerk: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Claimed service call
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceCall"
+        "401":
+          description: Authentication required
+        "403":
+          description: Active technician access required
+        "404":
+          description: Service call not found
+        "409":
+          description: Service call is no longer available to claim
+
+  /calls/{id}/status:
+    patch:
+      operationId: updateServiceCallStatus
+      tags: [team]
+      summary: Update a service call status
+      security: [{ clerk: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CallStatusUpdate"
+      responses:
+        "200":
+          description: Updated call
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceCall"
+
+  /calls/{id}/pay:
+    patch:
+      operationId: updateServiceCallPay
+      tags: [team]
+      summary: Set the technician pay for a call
+      security: [{ clerk: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PayUpdate"
+      responses:
+        "200":
+          description: Updated call
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceCall"
+
+  /calls/{id}/phone-sharing:
+    patch:
+      operationId: updateServiceCallPhoneSharing
+      tags: [team]
+      summary: Explicitly reveal or hide the customer phone for the assigned technician
+      security: [{ clerk: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PhoneSharingUpdate"
+      responses:
+        "200":
+          description: Updated call
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceCall"
+
+  /calls/{id}/deposit:
+    patch:
+      operationId: recordServiceCallDeposit
+      tags: [team]
+      summary: Record an outside-the-platform deposit as received
+      security: [{ clerk: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DepositUpdate"
+      responses:
+        "200":
+          description: Updated call with manually verified deposit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceCall"
+
+  /calls/{id}/tracking-link:
+    post:
+      operationId: createServiceCallTrackingLink
+      tags: [team]
+      summary: Create a private customer tracking link for a paid call
+      security: [{ clerk: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TrackingLinkInput"
+      responses:
+        "201":
+          description: Private tracking link
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrackingLinkCreated"
+        "400":
+          description: Call is not ready for tracking
+        "403":
+          description: Owner or admin access required
+    delete:
+      operationId: revokeServiceCallTrackingLink
+      tags: [team]
+      summary: Revoke the customer tracking link for a call
+      security: [{ clerk: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Link revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrackingLinkRevoked"
+
+  /receipts:
+    get:
+      operationId: listReceipts
+      tags: [team]
+      summary: List customer receipts for owner or admin staff
+      security: [{ clerk: [] }]
+      responses:
+        "200":
+          description: Customer receipts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Receipt"
+        "401":
+          description: Authentication required
+        "403":
+          description: Owner or admin access required
+    post:
+      operationId: createReceipt
+      tags: [team]
+      summary: Create a customer receipt for an assigned service call or manual office record
+      security: [{ clerk: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReceiptInput"
+      responses:
+        "201":
+          description: Created customer receipt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Receipt"
+        "400":
+          description: Invalid receipt
+        "401":
+          description: Authentication required
+        "403":
+          description: Active technician access required; technicians may only use their assigned service calls
+        "404":
+          description: Service call not found
+
+  /receipts/signatures:
+    get:
+      operationId: listReceiptSignatures
+      tags: [team]
+      summary: List receipt signature status for the owner
+      security: [{ clerk: [] }]
+      responses:
+        "200":
+          description: Receipt signature statuses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReceiptSignatureStatus"
+        "401":
+          description: Authentication required
+        "403":
+          description: Owner access required
+
+  /receipts/{id}/signature-session:
+    get:
+      operationId: getReceiptSignatureSession
+      tags: [team]
+      summary: Get the receipt and policy details for an owner signature session
+      security: [{ clerk: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Signature session details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReceiptSignatureSession"
+        "400":
+          description: Receipt is not eligible for a payment signature
+        "401":
+          description: Authentication required
+        "403":
+          description: Owner access required
+        "404":
+          description: Receipt not found
+
+  /receipts/{id}/signature:
+    post:
+      operationId: createReceiptSignature
+      tags: [team]
+      summary: Capture an immutable owner-side customer payment acknowledgment
+      security: [{ clerk: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReceiptSignatureInput"
+      responses:
+        "201":
+          description: Signed payment acknowledgment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReceiptSignature"
+        "400":
+          description: Invalid signature, consent, or policy acknowledgment
+        "401":
+          description: Authentication required
+        "403":
+          description: Owner access required
+        "404":
+          description: Receipt not found
+        "409":
+          description: Receipt already has an active signature
+
+  /receipts/{id}/signature/void:
+    post:
+      operationId: voidReceiptSignature
+      tags: [team]
+      summary: Void an existing receipt signature so a corrected acknowledgment can be captured
+      security: [{ clerk: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReceiptSignatureVoidInput"
+      responses:
+        "200":
+          description: Voided payment acknowledgment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReceiptSignature"
+        "400":
+          description: Invalid void reason
+        "401":
+          description: Authentication required
+        "403":
+          description: Owner access required
+        "404":
+          description: Active signature not found
+
+  /receipts/{id}/send:
+    post:
+      operationId: sendReceipt
+      tags: [team]
+      summary: Send a customer receipt link by SMS
+      security: [{ clerk: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Receipt delivery result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReceiptSendResult"
+        "400":
+          description: Receipt cannot be sent
+        "401":
+          description: Authentication required
+        "403":
+          description: Owner or admin access required
+        "404":
+          description: Receipt not found
+        "409":
+          description: Receipt already sent or delivery outcome needs attention
+
+  /receipts/{id}:
+    patch:
+      operationId: updateReceipt
+      tags: [team]
+      summary: Edit a customer receipt
+      security: [{ clerk: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReceiptInput"
+      responses:
+        "200":
+          description: Updated customer receipt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Receipt"
+        "400":
+          description: Invalid receipt
+        "401":
+          description: Authentication required
+        "403":
+          description: Owner or admin access required
+        "404":
+          description: Receipt or service call not found
+        "409":
+          description: Receipt has an active signed acknowledgment and must be voided before editing
+
+  /receipts/public/{token}:
+    get:
+      operationId: getPublicReceipt
+      tags: [receipts]
+      summary: Read a customer receipt using its private link
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 32
+      responses:
+        "200":
+          description: Customer-safe receipt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicReceipt"
+        "404":
+          description: Receipt link not found or expired
+
+  /calls/{id}/tracking-sharing:
+    patch:
+      operationId: updateServiceCallTrackingSharing
+      tags: [team]
+      summary: Start or stop location sharing for an assigned call
+      security: [{ clerk: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TrackingSharingUpdate"
+      responses:
+        "200":
+          description: Updated tracking sharing state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrackingSharing"
+
+  /calls/{id}/tracking-location:
+    patch:
+      operationId: updateServiceCallTrackingLocation
+      tags: [team]
+      summary: Update the assigned technician location and ETA
+      security: [{ clerk: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TrackingLocationUpdate"
+      responses:
+        "200":
+          description: Updated tracking location
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrackingSharing"
+
+  /calls/{id}/conversation:
+    get:
+      operationId: getServiceCallConversation
+      tags: [team]
+      summary: Read the shared conversation for an accessible service call
+      security: [{ clerk: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Service call conversation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+
+  /calls/{id}/conversation/messages:
+    post:
+      operationId: sendServiceCallMessage
+      tags: [team]
+      summary: Send a message to an accessible service call conversation
+      security: [{ clerk: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MessageInput"
+      responses:
+        "201":
+          description: Updated service call conversation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+
+  /tracking/sms-status:
+    get:
+      operationId: getTrackingSmsStatus
+      tags: [team]
+      summary: Check whether automated tracking SMS delivery is configured
+      security: [{ clerk: [] }]
+      responses:
+        "200":
+          description: SMS configuration status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrackingSmsStatus"
+
+  /tracking/{token}:
+    get:
+      operationId: getPublicTracking
+      tags: [tracking]
+      summary: Read the approved public tracking view for a private link
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 32
+      responses:
+        "200":
+          description: Public tracking view
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicTracking"
+        "404":
+          description: Link not found, revoked, expired, or not yet approved
+
+  /tracking/{token}/conversation:
+    get:
+      operationId: getPublicTrackingConversation
+      tags: [tracking]
+      summary: Read the conversation for a private customer tracking link
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 32
+      responses:
+        "200":
+          description: Customer-safe conversation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+        "404":
+          description: Link not found or expired
+
+  /tracking/{token}/conversation/messages:
+    post:
+      operationId: sendPublicTrackingMessage
+      tags: [tracking]
+      summary: Send a customer message through a private tracking link
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 32
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MessageInput"
+      responses:
+        "201":
+          description: Updated customer-safe conversation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+        "400":
+          description: Closed call or invalid message
+        "404":
+          description: Link not found or expired
+
+  /contracts:
+    get:
+      operationId: listTechnicianContracts
+      tags: [team]
+      summary: List technician contracts
+      security: [{ clerk: [] }]
+      responses:
+        "200":
+          description: Contracts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TechnicianContract"
+    post:
+      operationId: createTechnicianContract
+      tags: [team]
+      summary: Create a technician contract
+      security: [{ clerk: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateContractInput"
+      responses:
+        "201":
+          description: Contract created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TechnicianContract"
+
+components:
+  schemas:
+    ShopProduct:
+      type: object
+      required: [id, name, prices]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+        images:
+          type: array
+          items:
+            type: string
+        prices:
+          type: array
+          items:
+            $ref: "#/components/schemas/ShopPrice"
+
+    ShopPrice:
+      type: object
+      required: [id, unit_amount, currency]
+      properties:
+        id:
+          type: string
+        unit_amount:
+          type: integer
+        currency:
+          type: string
+
+    CheckoutInput:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            required: [priceId, quantity]
+            properties:
+              priceId:
+                type: string
+              quantity:
+                type: integer
+        customerEmail:
+          type: ["string", "null"]
+
+    CheckoutResult:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+
+    EbayPart:
+      type: object
+      required: [id, title, itemUrl]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        price:
+          type: ["number", "null"]
+        currency:
+          type: string
+        imageUrl:
+          type: ["string", "null"]
+        itemUrl:
+          type: string
+        condition:
+          type: string
+        shipping:
+          type: ["string", "null"]
+        seller:
+          type: ["string", "null"]
+        sellerFeedback:
+          type: ["string", "null"]
+
+    DepositInput:
+      type: object
+      properties:
+        customerEmail:
+          type: ["string", "null"]
+        customerName:
+          type: ["string", "null"]
+        serviceType:
+          type: ["string", "null"]
+        vehicleType:
+          type: ["string", "null"]
+
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    ContactInput:
+      type: object
+      required: [name, phone, serviceType, vehicleType, description]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        phone:
+          type: string
+          minLength: 7
+        email:
+          type: ["string", "null"]
+        serviceType:
+          type: string
+          description: "Type of service needed (e.g., oil change, tire, semi truck, etc.)"
+        vehicleType:
+          type: string
+          description: "sedan, suv, truck, semi, other"
+        description:
+          type: string
+          minLength: 1
+        urgency:
+          type: string
+          enum: [routine, soon, urgent]
+        notes:
+          type: ["string", "null"]
+        location:
+          type: ["string", "null"]
+
+    TechnicianApplication:
+      type: object
+      required: [id, fullName, phone, email, serviceArea, experience, specialties, availability, introduction, status, ownerNotes, reviewedAt, createdAt, updatedAt]
+      properties:
+        id: { type: integer }
+        fullName: { type: string }
+        phone: { type: string }
+        email: { type: string, format: email }
+        serviceArea: { type: string }
+        experience: { type: string }
+        specialties: { type: string }
+        availability: { type: string }
+        introduction: { type: ["string", "null"] }
+        status: { type: string, enum: [new, reviewing, approved, declined] }
+        ownerNotes: { type: ["string", "null"] }
+        reviewedAt: { type: ["string", "null"], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    TechnicianApplicationInput:
+      type: object
+      required: [fullName, phone, email, serviceArea, experience, specialties, availability]
+      properties:
+        fullName: { type: string, minLength: 1, maxLength: 120 }
+        phone: { type: string, minLength: 7, maxLength: 40 }
+        email: { type: string, format: email, maxLength: 254 }
+        serviceArea: { type: string, minLength: 1, maxLength: 160 }
+        experience: { type: string, minLength: 1, maxLength: 120 }
+        specialties: { type: string, minLength: 1, maxLength: 500 }
+        availability: { type: string, minLength: 1, maxLength: 120 }
+        introduction: { type: ["string", "null"], maxLength: 2000 }
+
+    TechnicianApplicationSubmission:
+      type: object
+      required: [submitted, message]
+      properties:
+        submitted: { type: boolean }
+        message: { type: string }
+
+    TechnicianApplicationUpdate:
+      type: object
+      properties:
+        status: { type: string, enum: [new, reviewing, approved, declined] }
+        ownerNotes: { type: ["string", "null"], maxLength: 4000 }
+
+    ContactSubmission:
+      type: object
+      required: [id, name, phone, serviceType, vehicleType, description, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: ["string", "null"]
+        serviceType:
+          type: string
+        vehicleType:
+          type: string
+        description:
+          type: string
+        urgency:
+          type: string
+          enum: [routine, soon, urgent]
+        notes:
+          type: ["string", "null"]
+        location:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    Technician:
+      type: object
+      required: [id, email, name, dispatchLane, role, availability, active, createdAt, updatedAt]
+      properties:
+        id: { type: integer }
+        email: { type: string, format: email }
+        name: { type: string }
+        phone: { type: ["string", "null"] }
+        specialty: { type: ["string", "null"] }
+        baseAddress: { type: ["string", "null"] }
+        serviceArea: { type: ["string", "null"] }
+        tools: { type: ["string", "null"] }
+        limitations: { type: ["string", "null"] }
+        bio: { type: ["string", "null"] }
+        dispatchLane: { type: string, enum: [general, roadside] }
+        role: { type: string, enum: [owner, admin, technician] }
+        availability: { type: string, enum: [available, busy, offline] }
+        active: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    AvailabilityUpdate:
+      type: object
+      required: [availability]
+      properties:
+        availability: { type: string, enum: [available, busy, offline] }
+
+    CreateTechnicianInput:
+      type: object
+      required: [email, name]
+      properties:
+        email: { type: string, format: email }
+        name: { type: string, minLength: 1 }
+        phone: { type: ["string", "null"] }
+        specialty: { type: ["string", "null"] }
+        dispatchLane: { type: string, enum: [general, roadside], default: general }
+
+    UpdateTechnicianInput:
+      type: object
+      properties:
+        name: { type: string, minLength: 1 }
+        phone: { type: ["string", "null"] }
+        specialty: { type: ["string", "null"] }
+        baseAddress: { type: ["string", "null"], maxLength: 240 }
+        serviceArea: { type: ["string", "null"], maxLength: 240 }
+        tools: { type: ["string", "null"], maxLength: 1000 }
+        limitations: { type: ["string", "null"], maxLength: 1000 }
+        bio: { type: ["string", "null"], maxLength: 1000 }
+        dispatchLane: { type: string, enum: [general, roadside] }
+        active: { type: boolean }
+        role: { type: string, enum: [admin, technician] }
+
+    TechnicianProfileUpdate:
+      type: object
+      minProperties: 1
+      properties:
+        phone:
+          type: ["string", "null"]
+          minLength: 7
+          maxLength: 40
+        specialty:
+          type: ["string", "null"]
+          maxLength: 500
+        baseAddress:
+          type: ["string", "null"]
+          maxLength: 240
+        serviceArea:
+          type: ["string", "null"]
+          maxLength: 240
+        tools:
+          type: ["string", "null"]
+          maxLength: 1000
+        limitations:
+          type: ["string", "null"]
+          maxLength: 1000
+        bio:
+          type: ["string", "null"]
+          maxLength: 1000
+
+    TechnicianNotification:
+      type: object
+      required: [id, callId, technicianId, channel, title, body, deliveryStatus, readAt, createdAt]
+      properties:
+        id: { type: integer }
+        callId: { type: integer }
+        technicianId: { type: integer }
+        channel: { type: string, enum: [in_app] }
+        title: { type: string }
+        body: { type: string }
+        deliveryStatus: { type: string, enum: [sent] }
+        readAt: { type: ["string", "null"], format: date-time }
+        createdAt: { type: string, format: date-time }
+
+    TechnicianNotificationFeed:
+      type: object
+      required: [notifications, unreadCount]
+      properties:
+        notifications:
+          type: array
+          items:
+            $ref: "#/components/schemas/TechnicianNotification"
+        unreadCount: { type: integer, minimum: 0 }
+
+    NotificationDelivery:
+      type: object
+      required: [id, technicianId, technicianName, channel, deliveryStatus, providerMessageId, failureReason, sentAt, createdAt]
+      properties:
+        id: { type: integer }
+        technicianId: { type: integer }
+        technicianName: { type: string }
+        channel: { type: string, enum: [in_app, sms] }
+        deliveryStatus: { type: string, enum: [pending, sending, sent, failed, unknown] }
+        providerMessageId: { type: ["string", "null"] }
+        failureReason: { type: ["string", "null"] }
+        sentAt: { type: ["string", "null"], format: date-time }
+        createdAt: { type: string, format: date-time }
+
+    CallNotificationDeliveries:
+      type: object
+      required: [callId, broadcastStatus, broadcastFailureReason, deliveries]
+      properties:
+        callId: { type: integer }
+        broadcastStatus: { type: string, enum: [queued, processing, complete, needs_attention] }
+        broadcastFailureReason: { type: ["string", "null"] }
+        deliveries:
+          type: array
+          items:
+            $ref: "#/components/schemas/NotificationDelivery"
+
+    RetryCallNotificationInput:
+      type: object
+      required: [notificationId]
+      properties:
+        notificationId: { type: integer }
+
+    NotificationRetry:
+      type: object
+      required: [id, callId, technicianId, channel, deliveryStatus]
+      properties:
+        id: { type: integer }
+        callId: { type: integer }
+        technicianId: { type: integer }
+        channel: { type: string, enum: [sms] }
+        deliveryStatus: { type: string, enum: [pending] }
+
+    ServiceCall:
+      type: object
+      required: [id, name, phone, serviceType, vehicleType, description, urgency, notes, dispatchLane, status, payCents, technicianPaySetAt, phoneSharedWithTechnicianAt, depositStatus, depositAmountCents, createdAt]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        phone: { type: ["string", "null"] }
+        email: { type: ["string", "null"] }
+        serviceType: { type: string }
+        vehicleType: { type: string }
+        description: { type: string }
+        urgency: { type: string, enum: [routine, soon, urgent] }
+        notes: { type: ["string", "null"] }
+        location: { type: ["string", "null"] }
+        dispatchLane: { type: string, enum: [general, roadside] }
+        status: { type: string, enum: [new, assigned, in_progress, completed, cancelled] }
+        assignedTechnicianId: { type: ["integer", "null"] }
+        assignedTechnicianName: { type: ["string", "null"] }
+        payCents: { type: integer }
+        technicianPaySetAt: { type: ["string", "null"], format: date-time }
+        phoneSharedWithTechnicianAt: { type: ["string", "null"], format: date-time }
+        depositStatus: { type: string, enum: [pending, manually_verified, stripe_verified] }
+        depositMethod: { type: ["string", "null"], enum: [zelle, cash_app, venmo, apple_pay, cash, other, null] }
+        depositAmountCents: { type: integer, minimum: 1 }
+        depositReceivedAt: { type: ["string", "null"], format: date-time }
+        depositReference: { type: ["string", "null"] }
+        scheduledAt: { type: ["string", "null"], format: date-time }
+        assignedAt: { type: ["string", "null"], format: date-time }
+        completedAt: { type: ["string", "null"], format: date-time }
+        createdAt: { type: string, format: date-time }
+        tracking:
+          allOf:
+            - $ref: "#/components/schemas/TrackingSummary"
+          nullable: true
+
+    AvailableServiceCall:
+      type: object
+      required: [id, serviceCategory, vehicleCategory, vehicleYear, vehicleMake, vehicleModel, urgency, dispatchLane, status, payCents, technicianPaySetAt, locationArea, locationZip, scheduledAt, createdAt]
+      properties:
+        id: { type: integer }
+        serviceCategory: { type: string, enum: [diagnostics, battery, tires, brakes, cooling, electrical, engine, roadside, general] }
+        vehicleCategory: { type: string, enum: [car, truck, suv, van, motorcycle, commercial, vehicle] }
+        vehicleYear: { type: ["string", "null"] }
+        vehicleMake: { type: ["string", "null"] }
+        vehicleModel: { type: ["string", "null"] }
+        urgency: { type: string, enum: [routine, soon, urgent] }
+        dispatchLane: { type: string, enum: [general, roadside] }
+        status: { type: string, enum: [new] }
+        payCents: { type: integer }
+        technicianPaySetAt: { type: ["string", "null"], format: date-time }
+        locationArea: { type: ["string", "null"] }
+        locationZip: { type: ["string", "null"] }
+        scheduledAt: { type: ["string", "null"], format: date-time }
+        createdAt: { type: string, format: date-time }
+
+    Receipt:
+      type: object
+      required: [id, receiptNumber, serviceCallId, customerName, customerPhone, customerAddress, vehicleYear, vehicleMake, vehicleModel, receiptDate, serviceDescription, amountPaidCents, paymentMethod, notes, accessTokenExpiresAt, deliveryStatus, providerMessageId, deliveryFailureReason, sentAt, createdBy, createdAt, updatedAt]
+      properties:
+        id: { type: integer }
+        receiptNumber: { type: string }
+        serviceCallId: { type: ["integer", "null"] }
+        customerName: { type: string }
+        customerPhone: { type: string }
+        customerAddress: { type: ["string", "null"] }
+        vehicleYear: { type: ["string", "null"] }
+        vehicleMake: { type: ["string", "null"] }
+        vehicleModel: { type: ["string", "null"] }
+        receiptDate: { type: string, pattern: '^\d{4}-\d{2}-\d{2}$' }
+        serviceDescription: { type: string }
+        amountPaidCents: { type: integer, minimum: 0 }
+        paymentMethod: { type: string, enum: [cash, card, zelle, cash_app, venmo, apple_pay, stripe, other] }
+        notes: { type: ["string", "null"] }
+        accessTokenExpiresAt: { type: ["string", "null"], format: date-time }
+        deliveryStatus: { type: string, enum: [not_sent, sending, sent, failed, unknown] }
+        providerMessageId: { type: ["string", "null"] }
+        deliveryFailureReason: { type: ["string", "null"] }
+        sentAt: { type: ["string", "null"], format: date-time }
+        createdBy: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    ReceiptInput:
+      type: object
+      required: [customerName, receiptDate, serviceDescription, amountPaidCents, paymentMethod]
+      properties:
+        serviceCallId: { type: ["integer", "null"] }
+        customerName: { type: string, minLength: 1, maxLength: 160 }
+        customerPhone: { type: string, minLength: 7, maxLength: 40 }
+        customerAddress: { type: ["string", "null"], maxLength: 300 }
+        vehicleYear: { type: ["string", "null"], maxLength: 10 }
+        vehicleMake: { type: ["string", "null"], maxLength: 80 }
+        vehicleModel: { type: ["string", "null"], maxLength: 80 }
+        receiptDate: { type: string, format: date }
+        serviceDescription: { type: string, minLength: 1, maxLength: 2000 }
+        amountPaidCents: { type: integer, minimum: 0, maximum: 100000000 }
+        paymentMethod: { type: string, enum: [cash, card, zelle, cash_app, venmo, apple_pay, stripe, other] }
+        notes: { type: ["string", "null"], maxLength: 2000 }
+
+    ReceiptSignatureStatus:
+      type: object
+      required: [receiptId, status, signatureId, signerName, signedAt, voidedAt]
+      properties:
+        receiptId: { type: integer }
+        status: { type: string, enum: [unsigned, signed, voided] }
+        signatureId: { type: ["integer", "null"] }
+        signerName: { type: ["string", "null"] }
+        signedAt: { type: ["string", "null"], format: date-time }
+        voidedAt: { type: ["string", "null"], format: date-time }
+
+    ReceiptSigningPolicy:
+      type: object
+      required: [version, title, acknowledgments]
+      properties:
+        version: { type: string }
+        title: { type: string }
+        acknowledgments:
+          type: array
+          minItems: 1
+          items: { type: string }
+
+    SignaturePoint:
+      type: object
+      required: [x, y]
+      properties:
+        x: { type: number }
+        y: { type: number }
+
+    SignatureStroke:
+      type: object
+      required: [points]
+      properties:
+        points:
+          type: array
+          minItems: 2
+          items:
+            $ref: "#/components/schemas/SignaturePoint"
+
+    SignedReceiptSnapshot:
+      type: object
+      required: [receiptNumber, customerName, customerAddress, vehicleYear, vehicleMake, vehicleModel, receiptDate, serviceDescription, amountPaidCents, paymentMethod, paymentStatusLabel]
+      properties:
+        receiptNumber: { type: string }
+        customerName: { type: string }
+        customerAddress: { type: ["string", "null"] }
+        vehicleYear: { type: ["string", "null"] }
+        vehicleMake: { type: ["string", "null"] }
+        vehicleModel: { type: ["string", "null"] }
+        receiptDate: { type: string, pattern: '^\d{4}-\d{2}-\d{2}$' }
+        serviceDescription: { type: string }
+        amountPaidCents: { type: integer, minimum: 0 }
+        paymentMethod: { type: string }
+        paymentStatusLabel: { type: string }
+
+    ReceiptSignature:
+      type: object
+      required: [id, receiptId, documentVersion, receiptSnapshot, policySnapshot, paymentVerificationStatus, signerName, signatureStrokes, electronicConsent, policyAcknowledged, signedAt, signedBy, documentHash, voidedAt, voidedBy, voidReason, createdAt]
+      properties:
+        id: { type: integer }
+        receiptId: { type: integer }
+        documentVersion: { type: string }
+        receiptSnapshot:
+          $ref: "#/components/schemas/SignedReceiptSnapshot"
+        policySnapshot:
+          $ref: "#/components/schemas/ReceiptSigningPolicy"
+        paymentVerificationStatus: { type: string, enum: [recorded_card_payment, stripe_verified] }
+        signerName: { type: string }
+        signatureStrokes:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/SignatureStroke"
+        electronicConsent: { type: boolean }
+        policyAcknowledged: { type: boolean }
+        signedAt: { type: string, format: date-time }
+        signedBy: { type: string }
+        documentHash: { type: string }
+        voidedAt: { type: ["string", "null"], format: date-time }
+        voidedBy: { type: ["string", "null"] }
+        voidReason: { type: ["string", "null"] }
+        createdAt: { type: string, format: date-time }
+
+    ReceiptSignatureSession:
+      type: object
+      required: [receipt, paymentVerificationStatus, paymentStatusLabel, policy, existingSignature]
+      properties:
+        receipt:
+          $ref: "#/components/schemas/Receipt"
+        paymentVerificationStatus: { type: string, enum: [recorded_card_payment, stripe_verified] }
+        paymentStatusLabel: { type: string }
+        policy:
+          $ref: "#/components/schemas/ReceiptSigningPolicy"
+        existingSignature:
+          anyOf:
+            - $ref: "#/components/schemas/ReceiptSignature"
+            - type: "null"
+
+    ReceiptSignatureInput:
+      type: object
+      required: [signerName, signatureStrokes, electronicConsent, policyAcknowledged]
+      properties:
+        signerName: { type: string, minLength: 1, maxLength: 160 }
+        signatureStrokes:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/SignatureStroke"
+        electronicConsent: { type: boolean }
+        policyAcknowledged: { type: boolean }
+
+    ReceiptSignatureVoidInput:
+      type: object
+      required: [signatureId, reason]
+      properties:
+        signatureId: { type: integer, minimum: 1 }
+        reason: { type: string, minLength: 1, maxLength: 500 }
+
+    ReceiptSendResult:
+      type: object
+      required: [receipt, deliveryStatus, customerUrl]
+      properties:
+        receipt:
+          $ref: "#/components/schemas/Receipt"
+        deliveryStatus: { type: string, enum: [sent, failed, unknown] }
+        customerUrl: { type: ["string", "null"] }
+        message: { type: string }
+
+    PublicReceipt:
+      type: object
+      required: [receiptNumber, customerName, customerAddress, vehicleYear, vehicleMake, vehicleModel, receiptDate, serviceDescription, amountPaidCents, paymentMethod, notes, expiresAt]
+      properties:
+        receiptNumber: { type: string }
+        customerName: { type: string }
+        customerAddress: { type: ["string", "null"] }
+        vehicleYear: { type: ["string", "null"] }
+        vehicleMake: { type: ["string", "null"] }
+        vehicleModel: { type: ["string", "null"] }
+        receiptDate: { type: string, pattern: '^\d{4}-\d{2}-\d{2}$' }
+        serviceDescription: { type: string }
+        amountPaidCents: { type: integer }
+        paymentMethod: { type: string }
+        notes: { type: ["string", "null"] }
+        expiresAt: { type: string, format: date-time }
+
+    CreateServiceCallInput:
+      type: object
+      required: [name, phone, serviceType, vehicleType, description]
+      properties:
+        name: { type: string, minLength: 1 }
+        phone: { type: string, minLength: 7 }
+        email: { type: ["string", "null"] }
+        serviceType: { type: string, minLength: 1 }
+        vehicleType: { type: string, minLength: 1 }
+        description: { type: string, minLength: 1 }
+        urgency: { type: string, enum: [routine, soon, urgent] }
+        notes: { type: ["string", "null"] }
+        location: { type: ["string", "null"] }
+        dispatchLane: { type: string, enum: [general, roadside], default: general }
+        payCents: { type: integer, minimum: 0 }
+
+    UpdateServiceCallInput:
+      type: object
+      required: [name, serviceType, vehicleType, description]
+      properties:
+        name: { type: string, minLength: 1 }
+        phone: { type: string, minLength: 7 }
+        email: { type: ["string", "null"] }
+        serviceType: { type: string, minLength: 1 }
+        vehicleType: { type: string, minLength: 1 }
+        description: { type: string, minLength: 1 }
+        urgency: { type: string, enum: [routine, soon, urgent] }
+        notes: { type: ["string", "null"] }
+        location: { type: ["string", "null"] }
+        dispatchLane: { type: string, enum: [general, roadside] }
+        payCents: { type: ["integer", "null"], minimum: 0 }
+
+    CallIntakeInput:
+      type: object
+      required: [summary]
+      properties:
+        summary: { type: string, minLength: 10, maxLength: 20000 }
+
+    CallIntakeExtraction:
+      type: object
+      required: [name, phone, email, serviceType, vehicleType, description, urgency, notes, location, missingFields, uncertainFields]
+      properties:
+        name: { type: ["string", "null"] }
+        phone: { type: ["string", "null"] }
+        email: { type: ["string", "null"] }
+        serviceType: { type: ["string", "null"] }
+        vehicleType: { type: ["string", "null"] }
+        description: { type: ["string", "null"] }
+        urgency: { type: ["string", "null"], enum: [routine, soon, urgent, null] }
+        notes: { type: ["string", "null"] }
+        location: { type: ["string", "null"] }
+        missingFields:
+          type: array
+          items: { type: string }
+        uncertainFields:
+          type: array
+          items: { type: string }
+
+    PhoneIntakeDraft:
+      type: object
+      required: [name, phone, email, serviceType, vehicleType, description, urgency, notes, location, missingFields, uncertainFields]
+      properties:
+        name: { type: ["string", "null"] }
+        phone: { type: ["string", "null"] }
+        email: { type: ["string", "null"] }
+        serviceType: { type: ["string", "null"] }
+        vehicleType: { type: ["string", "null"] }
+        description: { type: ["string", "null"] }
+        urgency: { type: ["string", "null"], enum: [routine, soon, urgent, null] }
+        notes: { type: ["string", "null"] }
+        location: { type: ["string", "null"] }
+        missingFields:
+          type: array
+          items: { type: string }
+        uncertainFields:
+          type: array
+          items: { type: string }
+
+    PhoneIntake:
+      type: object
+      required: [id, provider, providerCallId, callerNumber, businessNumber, direction, receivedAt, endedAt, durationSeconds, consentState, recordingStatus, recordingRetentionExpiresAt, transcriptStatus, transcript, transcriptedAt, draftStatus, draft, failureReason, reviewedAt, serviceCallId, createdAt, updatedAt]
+      properties:
+        id: { type: integer }
+        provider: { type: string, enum: [twilio] }
+        providerCallId: { type: string }
+        callerNumber: { type: string }
+        businessNumber: { type: ["string", "null"] }
+        direction: { type: string, enum: [inbound] }
+        receivedAt: { type: string, format: date-time }
+        endedAt: { type: ["string", "null"], format: date-time }
+        durationSeconds: { type: ["integer", "null"], minimum: 0 }
+        consentState: { type: string, enum: [notice_played, recording_received] }
+        recordingStatus: { type: string, enum: [awaiting_recording, available, processing, failed, expired, retention_failed] }
+        recordingRetentionExpiresAt: { type: ["string", "null"], format: date-time }
+        transcriptStatus: { type: string, enum: [pending, processing, ready, failed] }
+        transcript: { type: ["string", "null"] }
+        transcriptedAt: { type: ["string", "null"], format: date-time }
+        draftStatus: { type: string, enum: [waiting_for_recording, awaiting_transcription, processing, ready_for_review, approving, approved, failed] }
+        draft:
+          allOf:
+            - $ref: "#/components/schemas/PhoneIntakeDraft"
+          nullable: true
+        failureReason: { type: ["string", "null"] }
+        reviewedAt: { type: ["string", "null"], format: date-time }
+        serviceCallId: { type: ["integer", "null"] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    PhoneIntakeStatus:
+      type: object
+      required: [configured, provider, businessNumber, retentionDays, recordingAccess]
+      properties:
+        configured: { type: boolean }
+        provider: { type: string, enum: [twilio] }
+        businessNumber: { type: ["string", "null"] }
+        retentionDays: { type: integer, minimum: 1, maximum: 365 }
+        recordingAccess: { type: string, enum: [owner_admin_only] }
+
+    PhoneIntakeApproval:
+      type: object
+      required: [name, phone, serviceType, vehicleType, description]
+      properties:
+        name: { type: string, minLength: 1 }
+        phone: { type: string, minLength: 3 }
+        email: { type: ["string", "null"] }
+        serviceType: { type: string, minLength: 1 }
+        vehicleType: { type: string, minLength: 1 }
+        description: { type: string, minLength: 1 }
+        urgency: { type: string, enum: [routine, soon, urgent] }
+        notes: { type: ["string", "null"] }
+        location: { type: ["string", "null"] }
+        dispatchLane: { type: string, enum: [general, roadside], default: general }
+        payCents: { type: integer, minimum: 0 }
+
+    AssignCallInput:
+      type: object
+      required: [technicianId]
+      properties:
+        technicianId: { type: integer }
+
+    CallStatusUpdate:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [new, assigned, in_progress, completed, cancelled] }
+
+    PayUpdate:
+      type: object
+      required: [payCents]
+      properties:
+        payCents: { type: integer, minimum: 0 }
+
+    PhoneSharingUpdate:
+      type: object
+      required: [shared]
+      properties:
+        shared: { type: boolean }
+
+    DepositUpdate:
+      type: object
+      required: [method, amountCents]
+      properties:
+        method: { type: string, enum: [zelle, cash_app, venmo, apple_pay, cash, other] }
+        amountCents: { type: integer, minimum: 1 }
+        reference: { type: ["string", "null"] }
+
+    TrackingLinkInput:
+      type: object
+      properties:
+        expiresInHours: { type: integer, minimum: 1, maximum: 72 }
+        sendSms: { type: boolean }
+
+    TrackingLinkCreated:
+      type: object
+      required: [callId, url, expiresAt]
+      properties:
+        callId: { type: integer }
+        url: { type: string, format: uri }
+        expiresAt: { type: string, format: date-time }
+        smsSent: { type: boolean }
+
+    TrackingLinkRevoked:
+      type: object
+      required: [revoked]
+      properties:
+        revoked: { type: boolean }
+
+    TrackingSharingUpdate:
+      type: object
+      required: [sharing]
+      properties:
+        sharing: { type: boolean }
+        etaMinutes: { type: ["integer", "null"], minimum: 0, maximum: 1440 }
+
+    TrackingLocationUpdate:
+      type: object
+      required: [latitude, longitude]
+      properties:
+        latitude: { type: number, minimum: -90, maximum: 90 }
+        longitude: { type: number, minimum: -180, maximum: 180 }
+        accuracyMeters: { type: ["number", "null"], minimum: 0 }
+        etaMinutes: { type: ["integer", "null"], minimum: 0, maximum: 1440 }
+
+    TrackingSharing:
+      type: object
+      required: [callId, sharing, etaMinutes, location]
+      properties:
+        callId: { type: integer }
+        sharing: { type: boolean }
+        etaMinutes: { type: ["integer", "null"] }
+        location:
+          type: ["object", "null"]
+          required: [latitude, longitude, accuracyMeters, updatedAt]
+          properties:
+            latitude: { type: number }
+            longitude: { type: number }
+            accuracyMeters: { type: ["number", "null"] }
+            updatedAt: { type: string, format: date-time }
+
+    TrackingSummary:
+      type: object
+      required: [active, expiresAt, sharing, etaMinutes, location]
+      properties:
+        active: { type: boolean }
+        expiresAt: { type: string, format: date-time }
+        sharing: { type: boolean }
+        etaMinutes: { type: ["integer", "null"] }
+        location:
+          type: ["object", "null"]
+          required: [latitude, longitude, accuracyMeters, updatedAt]
+          properties:
+            latitude: { type: number }
+            longitude: { type: number }
+            accuracyMeters: { type: ["number", "null"] }
+            updatedAt: { type: string, format: date-time }
+
+    TrackingSmsStatus:
+      type: object
+      required: [configured, provider, senderNumber, statusText]
+      properties:
+        configured: { type: boolean }
+        provider: { type: string, enum: [twilio] }
+        senderNumber: { type: ["string", "null"] }
+        statusText: { type: string }
+
+    PublicTracking:
+      type: object
+      required: [status, statusLabel, sharing, hasLiveLocation, etaMinutes, expiresAt]
+      properties:
+        status: { type: string, enum: [scheduled, on_the_way, completed, cancelled] }
+        statusLabel: { type: string }
+        sharing: { type: boolean }
+        hasLiveLocation: { type: boolean }
+        etaMinutes: { type: ["integer", "null"] }
+        expiresAt: { type: string, format: date-time }
+
+    MessageInput:
+      type: object
+      required: [body]
+      properties:
+        body: { type: string, minLength: 1, maxLength: 2000 }
+
+    ConversationMessage:
+      type: object
+      required: [id, threadId, senderRole, senderLabel, body, deliveryStatus, readAt, createdAt]
+      properties:
+        id: { type: integer }
+        threadId: { type: integer }
+        senderRole: { type: string, enum: [customer, technician, admin] }
+        senderLabel: { type: string }
+        body: { type: string }
+        deliveryStatus: { type: string, enum: [sent, delivered, read] }
+        readAt: { type: ["string", "null"], format: date-time }
+        createdAt: { type: string, format: date-time }
+
+    Conversation:
+      type: object
+      required: [callId, threadId, messages, unreadCount]
+      properties:
+        callId: { type: integer }
+        threadId: { type: integer }
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConversationMessage"
+        unreadCount: { type: integer }
+
+    TechnicianContract:
+      type: object
+      required: [id, technicianId, title, status, perCallCents, hourlyRateCents, startDate, createdAt]
+      properties:
+        id: { type: integer }
+        technicianId: { type: integer }
+        technicianName: { type: ["string", "null"] }
+        title: { type: string }
+        status: { type: string, enum: [active, ended] }
+        perCallCents: { type: integer }
+        hourlyRateCents: { type: integer }
+        startDate: { type: string }
+        endDate: { type: ["string", "null"] }
+        notes: { type: ["string", "null"] }
+        createdAt: { type: string, format: date-time }
+
+    CreateContractInput:
+      type: object
+      required: [technicianId, title, startDate]
+      properties:
+        technicianId: { type: integer }
+        title: { type: string, minLength: 1 }
+        status: { type: string, enum: [active, ended] }
+        perCallCents: { type: integer, minimum: 0 }
+        hourlyRateCents: { type: integer, minimum: 0 }
+        startDate: { type: string }
+        endDate: { type: ["string", "null"] }
+        notes: { type: ["string", "null"] }
+
+    TechnicianDashboard:
+      type: object
+      required: [technician, calls, earningsCents, completedCalls, availableTechnicians]
+      properties:
+        technician:
+          $ref: "#/components/schemas/Technician"
+        calls:
+          type: array
+          items:
+            $ref: "#/components/schemas/ServiceCall"
+        earningsCents: { type: integer }
+        completedCalls: { type: integer }
+        availableTechnicians: { type: integer }
+
+  securitySchemes:
+    clerk:
+      type: http
+      scheme: bearer

@@ -1,0 +1,12 @@
+- [Stripe integration credentials](stripe-credentials.md) — settings key is `secret` not `secret_key`; header is `X-Replit-Token` not `X_REPLIT_TOKEN`
+- [stripe-replit-sync migrations in esbuild](stripe-migrations.md) — runMigrations breaks __dirname in esbuild bundle; run via tsx pre-step instead
+- [eBay integration](ebay-integration.md) — eBay Motors affiliate shop: env vars, API flow, and dual-mode parts shop
+- [Technician portal access model](technician-portal-access.md) — first sign-in bootstraps the owner; staff data stays role-scoped server-side.
+- [Manual deposit verification](manual-deposit-verification.md) — outside payments are owner-confirmed records, never waived or represented as Stripe payments.
+- [Legacy dispatch data normalization](legacy-dispatch-data.md) — older service calls may use pre-contract urgency and deposit values; normalize them at the API boundary.
+- [Customer tracking location privacy](customer-tracking-location-privacy.md) — private tracking links receive only a live-location flag, never raw GPS coordinates.
+- [Phone intake privacy lifecycle](phone-intake-privacy-lifecycle.md) — provider audio must be signed, admin-only, and deletion-confirmed before retention is complete.
+- [Illustrative service gallery](illustrative-service-gallery.md) — user approved the AI service scenes and restrained real-logo badge as the current visual direction.
+- [Technician dispatch SMS delivery safety](technician-dispatch-sms-safety.md) — retry only confirmed pre-acceptance failures; ambiguous provider outcomes require manual verification.
+- [Twilio trial constraints](twilio-trial-constraints.md) — trial mode restricts unverified recipients, but account-level 401s indicate credentials rather than trial limits
+- [Technician mobile delivery](technician-mobile-delivery.md) — ship the installable PWA first; consider a native technician app only after the web-app workflow is established.

@@ -1,0 +1,6 @@
+<svg width="480" height="110" viewBox="0 0 480 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="110" height="110" rx="18" fill="#FF7417"/>
+  <path d="M34 37L46 49L72 23L87 38L61 64L73 76L61 88L49 76L37 88L25 76L37 64L25 52L34 37Z" fill="white"/>
+  <text x="132" y="49" fill="white" font-family="Arial, sans-serif" font-size="34" font-weight="800" letter-spacing="2">HOUSTON</text>
+  <text x="132" y="81" fill="#FF7417" font-family="Arial, sans-serif" font-size="20" font-weight="800" letter-spacing="4">MOBILE MECHANIC</text>
+</svg>

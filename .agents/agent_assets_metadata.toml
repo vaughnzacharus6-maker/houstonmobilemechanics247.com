@@ -1,0 +1,14 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "W0RWxRvdyBBr_wWpG-q2k"
+uri = "file://artifacts/mechanic-site/public/semi-truck.jpg"
+type = "image"
+title = "Semi truck 18 wheeler parked on highway shoulder, industrial, gritty"
+
+[[outputs]]
+id = "-yoLWP6-StnnOknz7tFoH"
+uri = "file://artifacts/mechanic-site/public/services-bg.jpg"
+type = "image"
+title = "Dirty mechanic hands working on a car engine with tools, close up, grease, professional"
