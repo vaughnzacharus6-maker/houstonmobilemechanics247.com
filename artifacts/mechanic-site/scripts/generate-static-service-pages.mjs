@@ -56,12 +56,14 @@ for (const service of services) {
   html = html.replace('<div id="root"></div>', crawlableContent);
 
   const expectedTags = [
-    `<title>${pageTitle}</title>`,
-    `<meta name="description" content="${service.description}">`,
-    `<link rel="canonical" href="${url}">`,
-    `<meta property="og:url" content="${url}">`,
+    { label: "title", fragment: `<title>${pageTitle}</title>` },
+    { label: "description", fragment: `<meta name="description" content="${service.description}"` },
+    { label: "canonical", fragment: `<link rel="canonical" href="${url}"` },
+    { label: "og:url", fragment: `<meta property="og:url" content="${url}"` },
   ];
-  const missingTags = expectedTags.filter((tag) => !html.includes(tag));
+  const missingTags = expectedTags
+    .filter(({ fragment }) => !html.includes(fragment))
+    .map(({ label }) => label);
   if (missingTags.length) {
     throw new Error(`SEO generation failed for ${service.slug}: ${missingTags.join(", ")}`);
   }
