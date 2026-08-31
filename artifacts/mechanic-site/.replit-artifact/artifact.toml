@@ -23,6 +23,62 @@ publicDir = "artifacts/mechanic-site/dist/public"
 serve = "static"
 
 [[services.production.rewrites]]
+from = "/services/oil-change"
+to = "/services/oil-change/index.html"
+
+[[services.production.rewrites]]
+from = "/services/brake-repair"
+to = "/services/brake-repair/index.html"
+
+[[services.production.rewrites]]
+from = "/services/battery-electrical"
+to = "/services/battery-electrical/index.html"
+
+[[services.production.rewrites]]
+from = "/services/tires"
+to = "/services/tires/index.html"
+
+[[services.production.rewrites]]
+from = "/services/engine-diagnostics"
+to = "/services/engine-diagnostics/index.html"
+
+[[services.production.rewrites]]
+from = "/services/ac-cooling"
+to = "/services/ac-cooling/index.html"
+
+[[services.production.rewrites]]
+from = "/services/fuel-system"
+to = "/services/fuel-system/index.html"
+
+[[services.production.rewrites]]
+from = "/services/transmission"
+to = "/services/transmission/index.html"
+
+[[services.production.rewrites]]
+from = "/services/semi-truck-engine"
+to = "/services/semi-truck-engine/index.html"
+
+[[services.production.rewrites]]
+from = "/services/big-rig-brakes"
+to = "/services/big-rig-brakes/index.html"
+
+[[services.production.rewrites]]
+from = "/services/trailer-fleet-lighting"
+to = "/services/trailer-fleet-lighting/index.html"
+
+[[services.production.rewrites]]
+from = "/services/commercial-roadside"
+to = "/services/commercial-roadside/index.html"
+
+[[services.production.rewrites]]
+from = "/services/coolant-air-system"
+to = "/services/coolant-air-system/index.html"
+
+[[services.production.rewrites]]
+from = "/services/fleet-maintenance"
+to = "/services/fleet-maintenance/index.html"
+
+[[services.production.rewrites]]
 from = "/*"
 to = "/index.html"
 
