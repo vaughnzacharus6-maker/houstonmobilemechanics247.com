@@ -55,9 +55,20 @@ for (const service of services) {
   const crawlableContent = `<div id="root"><main style="max-width:960px;margin:0 auto;padding:48px 24px;font-family:Inter,Arial,sans-serif;background:#182126;color:#fff;min-height:100vh"><nav><a href="/" style="color:#ff7417">Houston Mobile Mechanic 24/7</a></nav><h1>${service.title}</h1><p>${service.summary}</p><p>${service.description}</p><p>Call <a href="tel:8329301444" style="color:#ff7417">(832) 930-1444</a> for 24/7 mobile service within Houston and the surrounding 50-mile service area.</p><h2>Related mobile mechanic services</h2><ul>${services.filter((item) => item.slug !== service.slug).slice(0, 5).map((item) => `<li><a href="/services/${item.slug}" style="color:#ff7417">${item.title}</a></li>`).join("")}</ul></main></div>`;
   html = html.replace('<div id="root"></div>', crawlableContent);
 
+  const expectedTags = [
+    `<title>${pageTitle}</title>`,
+    `<meta name="description" content="${service.description}">`,
+    `<link rel="canonical" href="${url}">`,
+    `<meta property="og:url" content="${url}">`,
+  ];
+  const missingTags = expectedTags.filter((tag) => !html.includes(tag));
+  if (missingTags.length) {
+    throw new Error(`SEO generation failed for ${service.slug}: ${missingTags.join(", ")}`);
+  }
+
   const routeDir = path.join(outputDir, "services", service.slug);
   await mkdir(routeDir, { recursive: true });
   await writeFile(path.join(routeDir, "index.html"), html);
 }
 
-console.log(`Generated ${services.length} crawlable service pages.`);
+console.log(`Generated and validated ${services.length} crawlable service pages.`);
